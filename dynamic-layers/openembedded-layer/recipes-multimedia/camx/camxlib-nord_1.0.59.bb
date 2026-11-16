@@ -10,3 +10,26 @@ SRC_URI[camxcommon.sha256sum] = "9e96afa52e5b26cf98c581fcf9ceb586343c65c9990ff67
 SRC_URI[camxtest.sha256sum] = "83932362b17f6ca8a9a61247a40771eb95e6ff9ae21837a69586020b13a7ce35"
 
 DEPENDS += "opencv userspace-resource-manager"
+
+do_install:append() {
+    # copy skel file
+    install -d ${D}${datadir}/qcom
+    cp -r ${S}/usr/share/qcom/nord ${D}${datadir}/qcom/
+}
+PACKAGE_BEFORE_PN += "${PN}-skel"
+RDEPENDS:${PN} += "${PN}-skel"
+FILES:${PN}-skel = "${datadir}/qcom"
+# Algo librarires are pre-compiled, pre-stripped.
+# Skipping QA checks: 'already-stripped', 'arch', 'libdir' because:
+# - Library files are Pre-stripped  (already-stripped)
+# - skel binaries/library are not AArch64 (arch mismatch)      (arch)
+# - Files are installed under /usr/share (non-libdir path) (libdir)
+# - .so symlink is used for runtime DSP usage, not a dev artifact (dev-so)
+# Skipping QA checks:'ldflags file-rdeps' because:
+# - Libraries are prebuilt dsp binary 
+INSANE_SKIP:${PN}-skel += " arch libdir already-stripped ldflags file-rdeps"
+
+# Preserve ${PN}-skel naming to avoid ambiguity in package identification.
+DEBIAN_NOAUTONAME:${PN}-skel = "1"
+# skel is dsp binary not AArch64, so skip file dependency scanning
+SKIP_FILEDEPS:camxlib-${CAMX_PLATFORM}-skel = "1"
